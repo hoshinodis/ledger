@@ -29,6 +29,7 @@ func runServe(args []string) {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 	dbPath := fs.String("db", defaultDBPath(), "path to the SQLite database file")
 	addr := fs.String("addr", defaultAddr(), "HTTP listen address")
+	uiDir := fs.String("ui", "web/dist", "directory of the built web UI (empty string disables)")
 	if err := fs.Parse(args); err != nil {
 		os.Exit(2)
 	}
@@ -49,6 +50,10 @@ func runServe(args []string) {
 	mux := http.NewServeMux()
 	serve.New(svc).Register(mux)
 	mux.Handle("/mcp", mcpserver.StreamHandler(svc))
+	// Serve the built web UI when present (go run without a UI build has none).
+	if ui := serve.StaticDir(*uiDir); ui != nil {
+		mux.Handle("/", ui)
+	}
 
 	log.Printf("ledger listening on http://%s (db: %s)", *addr, *dbPath)
 	srv := &http.Server{Addr: *addr, Handler: mux}
